@@ -1,0 +1,95 @@
+rm(list=ls())
+
+library(tm)
+library(NLP)
+
+###################################################
+############ Read All Tweets  #####################
+###################################################
+# For convenience, I've put all tweets from each  #
+# year under one floder named 'fb'. So 'fb' has   #
+# 60 csv files                                    #
+###################################################
+
+#############     For Loop        #################
+setwd("~/Documents/Rochester/Social Media/fb")
+path=c("~/Documents/Rochester/Social Media/fb")
+fbpost = list.files(path,ignore.case = FALSE)
+
+alldocs <- c()
+alldocs.index <- c()
+j <-1
+
+for(i in fbpost){
+  post <-read.csv(i,header = FALSE)
+  n<- nrow(post)
+  alldocs[j]<-as.String(readLines(i,n,warn=FALSE))
+  alldocs.index[j] <- i
+  j <- j+1
+}
+
+###################################################
+############ Build DocumentTermMatrix  ############
+###################################################
+
+docs <- Corpus(VectorSource(alldocs))
+dtm <- DocumentTermMatrix(docs, control=list(tolower=T, removePunctuation=T, 
+                                             removeNumbers=T, stripWhitespace=T, 
+                                             stopwords=stopwords("english")))
+dtm = removeSparseTerms(dtm,0.999)
+dtm2 <- as.matrix(dtm)
+dtm2 <- as.data.frame(dtm2)
+
+# Compute Frequency Percentage (percentage of     #
+# tweets of particular term in terms of the total #
+# number of tweets, monthly)                      #
+
+dtm3 <-  dtm2/rowSums(dtm2)
+
+###################################################
+############ Build Food Ingredients List  #########
+###################################################
+
+ingredients <- read.delim("~/Documents/Rochester/Social Media/ingredients.txt",
+                          header = FALSE)
+ingredients <- sapply(ingredients, tolower)
+ingredients <- as.character(ingredients[,1])
+
+# Seperate those words like "Acidulated Water"    #
+# into two words                                  #
+
+
+ingredients <- unique(unlist(sapply(ingredients, strsplit, "\\s+", USE.NAMES = FALSE)))
+
+
+###################################################
+# Filter on the total tweets by matching with the #
+# terms in the Foodingredients.txt                #
+###################################################
+
+dtm4 <- dtm3[,colnames(dtm3) %in% ingredients]
+
+###################################################
+############ TimeSeries Model Detect Trends  ######
+###################################################
+
+#############      avocado    #################
+avocado <- dtm4$avocado
+avocadotimeseries<-ts(avocado,frequency=12,start=c(2011,1))  
+plot.ts(avocadotimeseries)
+avocadotimeseriescomponents <- decompose(avocadotimeseries)
+plot(avocadotimeseriescomponents)
+
+#############      Pumpkin    #################
+pumpkin <- dtm4$pumpkin
+pumpkintimeseries<-ts(pumpkin,frequency=12,start=c(2011,1))  
+plot.ts(pumpkintimeseries)
+pumpkintimeseriescomponents <- decompose(pumpkintimeseries)
+plot(pumpkintimeseriescomponents)
+
+#############      Cauliflower     #################
+cauliflower <- dtm4$cauliflower
+cauliflowertimeseries<-ts(cauliflower,frequency=12,start=c(2011,1))  
+plot.ts(cauliflowertimeseries)
+cauliflowertimeseriescomponents <- decompose(cauliflowertimeseries)
+plot(cauliflowertimeseriescomponents)
