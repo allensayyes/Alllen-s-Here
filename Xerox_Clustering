@@ -1,0 +1,39 @@
+rm(list = ls())
+
+setwd("~/Documents/Simon/Spring/MA Project")
+
+library(readxl)
+library("BBmisc")
+library("cluster")
+
+df<- read_excel("Xerox Data.xlsx")
+
+### Two-dimension
+cluster_df<-data.frame(df$Recommend, df$`# Employees`)
+colnames(cluster_df)<-c("WTR","EmployessNumber")
+
+# Normalization
+cluster_df_Norm<-normalize(cluster_df) 
+plot(cluster_df_Norm)
+
+# Kmeans
+result<-kmeans(cluster_df_Norm, 3) # if we use 3 clusters, we can get between_SS / total_SS =  71.8 %
+cluster_df_withNum<-as.data.frame(cbind(cluster_df, result$cluster))
+
+# plot cluster
+clusplot(cluster_df_Norm, result$cluster, color=TRUE, shade=TRUE)
+
+### One-dimension
+cluster_df_One<-data.frame(df$`# Employees`)
+colnames(cluster_df_One)<-c("EmployessNumber")
+
+# Normalization
+cluster_df_One_Norm<-normalize(cluster_df_One) 
+plot(cluster_df_One_Norm)
+
+# Kmeans, create df with cluster number
+result_One<-kmeans(cluster_df_One_Norm, 2) # if we use 2 clusters, we can already get between_SS / total_SS =  70.9 %
+cluster_df_One_withNum<-as.data.frame(cbind(cluster_df_One, result_One$cluster))
+
+# plot cluster
+clusplot(cluster_df_One_Norm, result_One$cluster, color=TRUE, shade=TRUE)
