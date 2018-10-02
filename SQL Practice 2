@@ -1,0 +1,108 @@
+/* 1 and 2.  get names of projects supplied by s1 */
+/* first with subqueries */
+SELECT jname
+  FROM j
+ WHERE jno IN /* set of jno supplied by s1 */
+             (SELECT jno
+                FROM spj
+               WHERE sno = 's1');
+/* again using joins */
+SELECT jname
+  FROM j JOIN spj ON j.jno = spj.jno
+ WHERE sno = 's1';
+
+/* 3 and 4. get sno for suppliers who supply j1 and j2 */
+/* first with subqueries */
+SELECT sno
+  FROM spj
+ WHERE     jno = 'j1'
+       AND sno IN /* set of sno who supply j2 */
+           (SELECT sno
+              FROM spj
+             WHERE jno = 'j2');
+/* now with joins */
+SELECT DISTINCT a.sno
+  FROM spj a JOIN spj b ON a.sno = b.sno
+ WHERE a.jno = 'j1' AND b.jno = 'j2';
+
+/* 5. Get pno values for parts supplied to any project by a supplier in the same city */
+/* lets read this as p.city = s.city, other readings also ok */
+/* first with joins */
+SELECT DISTINCT spj.pno
+  FROM spj
+       JOIN s ON spj.sno = s.sno
+       JOIN p ON spj.pno = p.pno
+ WHERE s.city = p.city;
+
+/* solution explanation: p1 s1 in London, p5 s2 in paris, p6 s4 in London */
+/* now with subqueries */
+SELECT DISTINCT pno
+  FROM spj
+ WHERE sno IN                           /* supplier in the same city as pno */
+             (SELECT sno
+                FROM s
+               WHERE city IN /* city in which pno is stored */
+                     (SELECT city
+                        FROM p
+                       WHERE pno = spj.pno));
+
+/* 6. Get jno values for projects supplied by at least one supplier not in the same city */
+/* read as j.city not equal to at least one s.city where sno supplies jno */
+/* with joins */
+SELECT DISTINCT spj.jno
+  FROM spj
+       JOIN j ON spj.jno = j.jno
+       JOIN s ON spj.sno = s.sno
+ WHERE j.city != s.city;
+/* with subqueries */
+SELECT DISTINCT jno
+  FROM spj
+ WHERE sno IN /* set of sno in not in jno city */
+       (SELECT sno
+          FROM s
+         WHERE city NOT IN /* city in which jno is located */
+               (SELECT city
+                  FROM j
+                 WHERE j.jno = spj.jno));
+
+/* 7. Get sno values for suppliers supplying at least one part supplied */
+/* by at least one supplier who supplies a red part */
+/* with subqueries */
+SELECT DISTINCT sno
+  FROM spj
+ WHERE pno IN /* parts supplied by a supplier who has supplied at least one red part */
+             (SELECT pno
+                FROM spj
+               WHERE sno IN /* suppliers who have supplied at least one red part */
+                           (SELECT sno
+                              FROM spj
+                             WHERE pno IN               /* pno of red parts */
+                                         (SELECT pno
+                                            FROM p
+                                           WHERE color = 'red')));
+
+/* 8. Get all pairs of city values such that a supplier in the first city
+supplies a project in the second city */
+
+SELECT DISTINCT s.city, j.city
+  FROM s
+       JOIN spj ON s.sno = spj.sno
+       JOIN j ON spj.jno = j.jno;
+
+/* 9. Get sno values for suppliers who supply the same part to all projects */
+/* easy if you realize that a group by will help */
+SELECT sno
+  FROM spj
+GROUP BY sno
+HAVING count(DISTINCT jno) = (SELECT count(*) FROM j);
+
+/* 10. Get jno values for projects supplied entirely by supplier s1 */
+/* read as no supplier other than s1 supplies any part for the project */
+/* same group by idea */
+SELECT jno
+  FROM spj AS a
+ WHERE 's1' IN (SELECT sno
+                  FROM spj AS b
+                 WHERE a.jno = b.jno)
+GROUP BY jno
+HAVING count(DISTINCT sno) = 1;
